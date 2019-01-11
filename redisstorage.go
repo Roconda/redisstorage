@@ -115,12 +115,12 @@ func (s *Storage) Cookies(u *url.URL) string {
 
 // AddRequest implements queue.Storage.AddRequest() function
 func (s *Storage) AddRequest(r []byte) error {
-	return s.Client.RPush(s.getQueueID(), r).Err()
+	return s.Client.SAdd(s.getQueueID(), r).Err()
 }
 
 // GetRequest implements queue.Storage.GetRequest() function
 func (s *Storage) GetRequest() ([]byte, error) {
-	r, err := s.Client.LPop(s.getQueueID()).Bytes()
+	r, err := s.Client.SPop(s.getQueueID()).Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *Storage) GetRequest() ([]byte, error) {
 
 // QueueSize implements queue.Storage.QueueSize() function
 func (s *Storage) QueueSize() (int, error) {
-	i, err := s.Client.LLen(s.getQueueID()).Result()
+	i, err := s.Client.SCard(s.getQueueID()).Result()
 	return int(i), err
 }
 
