@@ -62,7 +62,7 @@ func (s *Storage) Clear() error {
 	if err != nil {
 		return err
 	}
-	r2 := s.Client.Keys(s.Prefix + ":request:*")
+	r2 := s.Client.Keys(s.Prefix + ":r:*")
 	keys2, err := r2.Result()
 	if err != nil {
 		return err
@@ -165,13 +165,13 @@ func (s *Storage) QueueSize() (int, error) {
 }
 
 func (s *Storage) getIDStr(ID uint64) string {
-	return fmt.Sprintf("%s:request:%d", s.Prefix, ID)
+	return fmt.Sprintf("%s:r:%d", s.Prefix, ID)
 }
 
 func (s *Storage) getCookieID(c string) string {
-	return fmt.Sprintf("%s:cookie:%s", s.Prefix, c)
+	return fmt.Sprintf("%s:c:%s", s.Prefix, c)
 }
 
 func (s *Storage) getQueueID() string {
-	return fmt.Sprintf("%s:queue", s.Prefix)
+	return fmt.Sprintf("%s:q", s.Prefix)
 }
