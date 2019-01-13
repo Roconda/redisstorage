@@ -1,9 +1,11 @@
 package redisstorage
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,6 +29,10 @@ type Storage struct {
 	// Expiration time for Visited keys. After expiration pages
 	// are to be visited again.
 	Expires time.Duration
+
+	// Max amount of visits to a domain in the given time window
+	// defined in Expires.
+	DomainVisitLimit int
 
 	mu sync.RWMutex // Only used for cookie methods.
 }
@@ -68,18 +74,38 @@ func (s *Storage) Clear() error {
 
 // Visited implements colly/storage.Visited()
 func (s *Storage) Visited(requestID uint64) error {
-	return s.Client.Set(s.getIDStr(requestID), "1", s.Expires).Err()
+	err := s.Client.Incr(s.getIDStr(requestID)).Err()
+	err2 := s.Client.Expire(s.getIDStr(requestID), s.Expires).Err()
+
+	if err != nil {
+		return err
+	} else if err2 != nil {
+		return err2
+	}
+
+	return nil
 }
 
 // IsVisited implements colly/storage.IsVisited()
 func (s *Storage) IsVisited(requestID uint64) (bool, error) {
-	_, err := s.Client.Get(s.getIDStr(requestID)).Result()
+	cnt, err := s.Client.Get(s.getIDStr(requestID)).Result()
 	if err == redis.Nil {
 		return false, nil
 	} else if err != nil {
 		return false, err
 	}
-	return true, nil
+
+	visitCount, err := strconv.Atoi(cnt)
+	if err != nil {
+		log.Printf("String conversion failed")
+		return false, err
+	}
+
+	if visitCount <= s.DomainVisitLimit {
+		return false, nil
+	}
+
+	return true, errors.New("Reached domain visit limit")
 }
 
 // SetCookies implements colly/storage..SetCookies()
